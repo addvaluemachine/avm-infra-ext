@@ -33,6 +33,8 @@ BUCKET_NAME="avm-$account_id-$AWS_REGION-terraform-backend"
 
 echo "Resources will be created in the $AWS_REGION region"
 
+export TF_VAR_region="$AWS_REGION"
+
 aws s3 ls "s3://$BUCKET_NAME" --region "$AWS_REGION" 2>/dev/null
 
 if [ $? -eq 0 ]; then
