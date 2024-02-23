@@ -9,8 +9,8 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "avm-terraform-backend"
+    bucket = "tfstate_bucket_name"
     key    = "terraform/terraform.tfstate"
-    region = "us-east-1"
+    region = "bucket_region"
   }
 }

@@ -57,7 +57,7 @@ data "aws_s3_bucket" "s3_bucket_chat" {
 ################################################################################
 
 resource "aws_s3_bucket" "s3_bucket_codepipeline" {
-  bucket        = "${local.workspace_namespace}-codepipeline"
+  bucket        = "${local.workspace_namespace}-${data.aws_caller_identity.current.account_id}-codepipeline"
   force_destroy = true
 }
 
@@ -91,7 +91,7 @@ module "lambda_function" {
   source_path = "${path.module}/files/invalidate-cloudfront.py"
 
   attach_policy_json = true
-  policy_json        = jsonencode(
+  policy_json = jsonencode(
     {
       "Version" : "2012-10-17",
       "Statement" : [
@@ -119,7 +119,7 @@ module "lambda_function" {
           "Resource" : ["*"]
         }
       ]
-    })
+  })
 
   tags = local.tags
 }
@@ -330,7 +330,7 @@ resource "aws_iam_role" "iam_role_codepipeline_webapp" {
           "Action" : "sts:AssumeRole"
         }
       ]
-    })
+  })
 
   tags = local.tags
 }
@@ -417,7 +417,7 @@ resource "aws_iam_policy" "iam_policy_policy_codepipeline_webapp" {
           ],
         }
       ]
-    })
+  })
 
   tags = local.tags
 }
@@ -612,7 +612,7 @@ resource "aws_iam_role" "iam_role_codepipeline_chat" {
           "Action" : "sts:AssumeRole"
         }
       ]
-    })
+  })
 
   tags = local.tags
 }
@@ -699,7 +699,7 @@ resource "aws_iam_policy" "iam_policy_policy_codepipeline_chat" {
           ],
         }
       ]
-    })
+  })
 
   tags = local.tags
 }
@@ -875,7 +875,7 @@ resource "aws_iam_role" "iam_role_codepipeline_server" {
           "Action" : "sts:AssumeRole"
         }
       ]
-    })
+  })
 
   tags = local.tags
 }
@@ -978,7 +978,7 @@ resource "aws_iam_policy" "iam_policy_policy_codepipeline_server" {
           "Resource" : "*",
         },
       ]
-    })
+  })
 
   tags = local.tags
 }

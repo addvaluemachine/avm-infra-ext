@@ -69,7 +69,7 @@ module "security_group_bastion" {
   tags = local.tags
 }
 
-module ec2_connect_role {
+module "ec2_connect_role" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
   version = "~> 5.28"
 
@@ -78,7 +78,7 @@ module ec2_connect_role {
   create_role             = true
   create_instance_profile = true
 
-  trusted_role_services   = ["ec2.amazonaws.com"]
+  trusted_role_services = ["ec2.amazonaws.com"]
   custom_role_policy_arns = [
     "arn:aws:iam::aws:policy/EC2InstanceConnect",
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"

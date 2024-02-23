@@ -1,16 +1,18 @@
+data "aws_caller_identity" "current" {}
+
 locals {
-  environment         = var.environment
-  namespace           = "avm-${var.environment}"
-  workspace_namespace = "avm-${terraform.workspace}-${var.environment}"
-  domain_name         = var.domain_name
-  certificate_arn     = var.certificate_arn
-  firebase_api_key    = var.firebase_api_key
-  firebase_auth_domain  = var.firebase_auth_domain
-  firebase_project_id   = var.firebase_project_id
-  firebase_storage_bucket = var.firebase_storage_bucket
+  environment                  = var.environment
+  namespace                    = "avm-${var.environment}"
+  workspace_namespace          = "avm-${terraform.workspace}-${var.environment}"
+  domain_name                  = var.domain_name
+  certificate_arn              = var.certificate_arn
+  firebase_api_key             = var.firebase_api_key
+  firebase_auth_domain         = var.firebase_auth_domain
+  firebase_project_id          = var.firebase_project_id
+  firebase_storage_bucket      = var.firebase_storage_bucket
   firebase_messaging_sender_id = var.firebase_messaging_sender_id
-  firebase_app_id = var.firebase_app_id
-  firebase_measurement_id = var.firebase_measurement_id
+  firebase_app_id              = var.firebase_app_id
+  firebase_measurement_id      = var.firebase_measurement_id
 
   tags = {
     Name        = local.namespace
@@ -18,14 +20,12 @@ locals {
   }
 }
 
-data "aws_caller_identity" "current" {}
-
 ################################################################################
 # S3
 ################################################################################
 
 resource "aws_s3_bucket" "aws_s3_bucket_chat" {
-  bucket        = "${local.workspace_namespace}-chat"
+  bucket        = "${local.workspace_namespace}-${data.aws_caller_identity.current.account_id}-chat"
   force_destroy = true
 }
 
@@ -88,7 +88,7 @@ module "cdn" {
   web_acl_id          = var.web_acl_arn
 
   create_origin_access_control = true
-  origin_access_control        = {
+  origin_access_control = {
     chat_s3_oac = {
       description      = "CloudFront access for S3"
       origin_type      = "s3"
@@ -160,7 +160,7 @@ module "ecr" {
       {
         rulePriority = 1,
         description  = "Keep only tagged images",
-        selection    = {
+        selection = {
           tagStatus   = "untagged",
           countType   = "imageCountMoreThan",
           countNumber = 1
@@ -186,7 +186,7 @@ resource "aws_secretsmanager_secret" "this" {
 }
 
 resource "aws_secretsmanager_secret_version" "this" {
-  secret_id     = aws_secretsmanager_secret.this.id
+  secret_id = aws_secretsmanager_secret.this.id
   secret_string = jsonencode(
     {
       "REACT_APP_FIREBASE_API_KEY" : "${local.firebase_api_key}",
@@ -196,10 +196,10 @@ resource "aws_secretsmanager_secret_version" "this" {
       "REACT_APP_FIREBASE_MESSAGING_SENDER_ID" : "${local.firebase_messaging_sender_id}",
       "REACT_APP_FIREBASE_APP_ID" : "${local.firebase_app_id}",
       "REACT_APP_FIREBASE_MEASUREMENT_ID" : "${local.firebase_measurement_id}",
-    })
+  })
 
   lifecycle {
-    ignore_changes = [secret_string,]
+    ignore_changes = [secret_string, ]
   }
 }
 

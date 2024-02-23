@@ -1,10 +1,10 @@
 locals {
-  environment         = var.environment
-  namespace           = "avm-${var.environment}"
-  workspace_namespace = "avm-${terraform.workspace}-${var.environment}"
-  server_namespace    = "${local.namespace}-server"
-  domain_name         = var.domain_name
-  certificate_arn     = var.certificate_arn
+  environment           = var.environment
+  namespace             = "avm-${var.environment}"
+  workspace_namespace   = "avm-${terraform.workspace}-${var.environment}"
+  server_namespace      = "${local.namespace}-server"
+  domain_name           = var.domain_name
+  certificate_arn       = var.certificate_arn
   firebase_project_id   = var.firebase_project_id
   firebase_private_key  = var.firebase_private_key
   firebase_client_email = var.firebase_client_email
@@ -36,14 +36,14 @@ data "aws_secretsmanager_secret" "this" {
   arn = aws_secretsmanager_secret_version.this.arn
   depends_on = [
     aws_secretsmanager_secret_version.this
-    ]
+  ]
 }
 
 data "aws_secretsmanager_secret_version" "this" {
   secret_id = data.aws_secretsmanager_secret.this.id
   depends_on = [
     data.aws_secretsmanager_secret_version.this
-    ]
+  ]
 }
 
 ################################################################################
@@ -92,7 +92,7 @@ resource "aws_ecs_task_definition" "this" {
           { name = k, valueFrom : "${aws_secretsmanager_secret.this.arn}:${k}::" }
         ]
       }
-    ])
+  ])
 }
 
 resource "aws_ecs_service" "this" {
@@ -117,7 +117,7 @@ resource "aws_ecs_service" "this" {
   }
 
   lifecycle {
-    ignore_changes = [task_definition,]
+    ignore_changes = [task_definition, ]
   }
 }
 
@@ -253,17 +253,17 @@ resource "aws_cloudwatch_metric_alarm" "cloudwatch_alarm_cpu_usage_low" {
 ################################################################################
 
 resource "aws_s3_bucket" "aws_s3_bucket_documents" {
-  bucket        = "${local.workspace_namespace}-documents"
+  bucket        = "${local.workspace_namespace}-${data.aws_caller_identity.current.account_id}-documents"
   force_destroy = true
 }
 
 resource "aws_s3_bucket" "aws_s3_bucket_assets" {
-  bucket        = "${local.workspace_namespace}-assets"
+  bucket        = "${local.workspace_namespace}-${data.aws_caller_identity.current.account_id}-assets"
   force_destroy = true
 }
 
 resource "aws_s3_bucket" "aws_s3_bucket_logs" {
-  bucket        = "${local.workspace_namespace}-bucket-access-logs"
+  bucket        = "${local.workspace_namespace}-${data.aws_caller_identity.current.account_id}-bucket-access-logs"
   force_destroy = true
 }
 
@@ -356,7 +356,7 @@ module "cdn" {
   web_acl_id      = var.web_acl_arn
 
   create_origin_access_control = true
-  origin_access_control        = {
+  origin_access_control = {
     assets_s3_oac = {
       description      = "CloudFront access for S3"
       origin_type      = "s3"
@@ -412,7 +412,7 @@ module "ecr" {
       {
         rulePriority = 1,
         description  = "Keep only tagged images",
-        selection    = {
+        selection = {
           tagStatus   = "untagged",
           countType   = "imageCountMoreThan",
           countNumber = 1
@@ -444,7 +444,7 @@ resource "aws_secretsmanager_secret" "this" {
 }
 
 resource "aws_secretsmanager_secret_version" "this" {
-  secret_id     = aws_secretsmanager_secret.this.id
+  secret_id = aws_secretsmanager_secret.this.id
   secret_string = jsonencode(
     {
       "NODE_ENV" : "production",
@@ -462,10 +462,10 @@ resource "aws_secretsmanager_secret_version" "this" {
       "GOOGLE_DRIVE_CLIENT_SECRET" : "<REPLACE_ME>",
       "AWS_SES_ACCESS_KEY" : "<REPLACE_ME>",
       "AWS_SES_SECRET_KEY" : "<REPLACE_ME>",
-    })
+  })
 
   lifecycle {
-    ignore_changes = [secret_string,]
+    ignore_changes = [secret_string, ]
   }
 }
 
@@ -500,7 +500,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
           "Effect" : "Allow"
         }
       ]
-    })
+  })
 }
 
 resource "aws_iam_role" "ecs_task_role" {
@@ -518,7 +518,7 @@ resource "aws_iam_role" "ecs_task_role" {
           "Effect" : "Allow"
         }
       ]
-    })
+  })
 }
 
 resource "aws_iam_policy" "aws_iam_policy_secrets_manager" {
@@ -542,7 +542,7 @@ resource "aws_iam_policy" "aws_iam_policy_secrets_manager" {
           ],
         }
       ]
-    })
+  })
 }
 
 resource "aws_iam_policy" "aws_iam_policy_s3" {
@@ -564,7 +564,7 @@ resource "aws_iam_policy" "aws_iam_policy_s3" {
           ]
         },
       ]
-    })
+  })
 }
 
 resource "aws_iam_policy" "aws_iam_policy_bedrock" {
@@ -585,7 +585,7 @@ resource "aws_iam_policy" "aws_iam_policy_bedrock" {
           ]
         },
       ]
-    })
+  })
 }
 
 resource "aws_iam_policy" "aws_iam_policy_sagemaker" {
@@ -606,7 +606,7 @@ resource "aws_iam_policy" "aws_iam_policy_sagemaker" {
           ]
         },
       ]
-    })
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_role_policy_attachment" {

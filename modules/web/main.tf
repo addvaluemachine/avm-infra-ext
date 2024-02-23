@@ -4,7 +4,7 @@ locals {
   workspace_namespace = "avm-${terraform.workspace}-${var.environment}"
   domain_name         = var.domain_name
   certificate_arn     = var.certificate_arn
-  
+
   tags = {
     Name        = local.namespace
     Environment = var.environment
@@ -18,7 +18,7 @@ data "aws_caller_identity" "current" {}
 ################################################################################
 
 resource "aws_s3_bucket" "aws_s3_bucket_web" {
-  bucket        = "${local.workspace_namespace}-web"
+  bucket        = "${local.workspace_namespace}-${data.aws_caller_identity.current.account_id}-web"
   force_destroy = true
 }
 
@@ -81,7 +81,7 @@ module "cdn" {
   web_acl_id          = var.web_acl_arn
 
   create_origin_access_control = true
-  origin_access_control        = {
+  origin_access_control = {
     web_s3_oac = {
       description      = "CloudFront access for S3"
       origin_type      = "s3"
@@ -153,7 +153,7 @@ module "ecr" {
       {
         rulePriority = 1,
         description  = "Keep only tagged images",
-        selection    = {
+        selection = {
           tagStatus   = "untagged",
           countType   = "imageCountMoreThan",
           countNumber = 1
@@ -179,7 +179,7 @@ resource "aws_secretsmanager_secret" "this" {
 }
 
 resource "aws_secretsmanager_secret_version" "this" {
-  secret_id     = aws_secretsmanager_secret.this.id
+  secret_id = aws_secretsmanager_secret.this.id
   secret_string = jsonencode(
     {
       "REACT_APP_FIREBASE_API_KEY" : var.firebase_api_key,
@@ -189,10 +189,10 @@ resource "aws_secretsmanager_secret_version" "this" {
       "REACT_APP_FIREBASE_MESSAGING_SENDER_ID" : var.firebase_messaging_sender_id,
       "REACT_APP_FIREBASE_APP_ID" : var.firebase_app_id,
       "REACT_APP_FIREBASE_MEASUREMENT_ID" : var.firebase_measurement_id,
-    })
+  })
 
   lifecycle {
-    ignore_changes = [secret_string,]
+    ignore_changes = [secret_string, ]
   }
 }
 

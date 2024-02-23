@@ -15,7 +15,7 @@ locals {
 resource "aws_iam_policy" "VantaAdditionalPermissions" {
   name        = "VantaAdditionalPermissions"
   description = "Custom Vanta Policy"
-  policy      = jsonencode({
+  policy = jsonencode({
     "Version" : "2012-10-17",
     "Statement" : [
       {

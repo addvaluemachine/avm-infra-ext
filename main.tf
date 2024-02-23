@@ -106,7 +106,7 @@ module "alb" {
       port        = 80
       protocol    = "HTTP"
       action_type = "redirect"
-      redirect    = {
+      redirect = {
         port        = "443"
         protocol    = "HTTPS"
         status_code = "HTTP_301"
@@ -120,7 +120,7 @@ module "alb" {
       protocol        = "HTTPS"
       certificate_arn = module.acm.acm_certificate_arn
       action_type     = "redirect"
-      redirect        = {
+      redirect = {
         port        = "443"
         protocol    = "HTTPS"
         host        = "chat.#{host}" # Redirect to chat subdomain
@@ -268,7 +268,7 @@ module "cluster" {
   }
 
   instance_class = "db.serverless"
-  instances      = {
+  instances = {
     1 = {
       identifier = "${local.workspace_namespace}-instance-1"
     }
@@ -407,7 +407,7 @@ resource "aws_elasticache_replication_group" "redis" {
   automatic_failover_enabled = false
 
   lifecycle {
-    ignore_changes = [node_type,]
+    ignore_changes = [node_type, ]
   }
 
   tags = local.tags
@@ -431,7 +431,7 @@ module "security_group_redis" {
   vpc_id          = module.vpc.vpc_id
   use_name_prefix = false
 
-  ingress_cidr_blocks      = ["0.0.0.0/0"]
+  ingress_cidr_blocks = ["0.0.0.0/0"]
   ingress_with_cidr_blocks = [
     {
       from_port   = var.redis_port
@@ -459,8 +459,8 @@ resource "aws_guardduty_detector" "guardduty_detector" {
 }
 
 resource "aws_cloudwatch_event_rule" "cloudwatch_event_rule_guardduty" {
-  name          = "${local.namespace}-guardduty-finding-events"
-  description   = "AWS GuardDuty event findings"
+  name        = "${local.namespace}-guardduty-finding-events"
+  description = "AWS GuardDuty event findings"
   event_pattern = jsonencode(
     {
       "detail-type" : [
@@ -469,7 +469,7 @@ resource "aws_cloudwatch_event_rule" "cloudwatch_event_rule_guardduty" {
       "source" : [
         "aws.guardduty"
       ]
-    })
+  })
 }
 
 resource "aws_cloudwatch_event_target" "cloudwatch_event_target_alerts" {
@@ -639,15 +639,15 @@ resource "aws_secretsmanager_secret" "this" {
 }
 
 resource "aws_secretsmanager_secret_version" "this" {
-  secret_id     = aws_secretsmanager_secret.this.id
+  secret_id = aws_secretsmanager_secret.this.id
   secret_string = jsonencode(
     {
       "CONTAINER_REGISTRY_USERNAME" : var.container_registry_username,
       "CONTAINER_REGISTRY_TOKEN" : var.container_registry_token != "" ? var.container_registry_token : "<REPLACE_ME>",
-    })
+  })
 
   lifecycle {
-    ignore_changes = [secret_string,]
+    ignore_changes = [secret_string, ]
   }
 }
 
@@ -712,19 +712,19 @@ module "server" {
 module "web" {
   source = "./modules/web"
 
-  region          = local.region
-  environment     = local.environment
-  domain_name     = local.domain_name
-  certificate_arn = module.acm_cloudfront.acm_certificate_arn
-  route53_zone_id = aws_route53_zone.this.zone_id
-  web_acl_arn     = module.acm_cloudfront.web_acl_cloudfront_arn
-  firebase_api_key = var.firebase_api_key
-  firebase_auth_domain  = var.firebase_auth_domain
-  firebase_project_id   = var.firebase_project_id
-  firebase_storage_bucket = var.firebase_storage_bucket
+  region                       = local.region
+  environment                  = local.environment
+  domain_name                  = local.domain_name
+  certificate_arn              = module.acm_cloudfront.acm_certificate_arn
+  route53_zone_id              = aws_route53_zone.this.zone_id
+  web_acl_arn                  = module.acm_cloudfront.web_acl_cloudfront_arn
+  firebase_api_key             = var.firebase_api_key
+  firebase_auth_domain         = var.firebase_auth_domain
+  firebase_project_id          = var.firebase_project_id
+  firebase_storage_bucket      = var.firebase_storage_bucket
   firebase_messaging_sender_id = var.firebase_messaging_sender_id
-  firebase_app_id = var.firebase_app_id
-  firebase_measurement_id = var.firebase_measurement_id
+  firebase_app_id              = var.firebase_app_id
+  firebase_measurement_id      = var.firebase_measurement_id
 
 
   depends_on = [
@@ -739,19 +739,19 @@ module "web" {
 module "chat" {
   source = "./modules/chat"
 
-  region          = local.region
-  environment     = local.environment
-  domain_name     = local.domain_name
-  certificate_arn = module.acm_cloudfront.acm_certificate_arn
-  route53_zone_id = aws_route53_zone.this.zone_id
-  web_acl_arn     = module.acm_cloudfront.web_acl_cloudfront_arn
-  firebase_api_key    = var.firebase_api_key
-  firebase_auth_domain  = var.firebase_auth_domain
-  firebase_project_id   = var.firebase_project_id
-  firebase_storage_bucket = var.firebase_storage_bucket
+  region                       = local.region
+  environment                  = local.environment
+  domain_name                  = local.domain_name
+  certificate_arn              = module.acm_cloudfront.acm_certificate_arn
+  route53_zone_id              = aws_route53_zone.this.zone_id
+  web_acl_arn                  = module.acm_cloudfront.web_acl_cloudfront_arn
+  firebase_api_key             = var.firebase_api_key
+  firebase_auth_domain         = var.firebase_auth_domain
+  firebase_project_id          = var.firebase_project_id
+  firebase_storage_bucket      = var.firebase_storage_bucket
   firebase_messaging_sender_id = var.firebase_messaging_sender_id
-  firebase_app_id = var.firebase_app_id
-  firebase_measurement_id = var.firebase_measurement_id
+  firebase_app_id              = var.firebase_app_id
+  firebase_measurement_id      = var.firebase_measurement_id
 
   depends_on = [
     module.acm_cloudfront,
