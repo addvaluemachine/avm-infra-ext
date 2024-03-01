@@ -96,5 +96,5 @@ fi
 
 # Apply Terraform changes
 echo "Applying Terraform changes..."
-terraform destroy --auto-approve
+terraform apply --auto-approve
 check_error $? "Terraform apply failed."
