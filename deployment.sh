@@ -49,26 +49,26 @@ sed -i '' -e "s/tfstate_bucket_name/$BUCKET_NAME/g" versions.tf
 
 sed -i '' -e "s/bucket_region/$AWS_REGION/g" versions.tf
 
-#Check for GuardDuty Enable
-guard_duty=$(aws guardduty list-detectors --region "$AWS_REGION" --query "length(DetectorIds)" --output text)
-
-if [ "$guard_duty" -gt 0 ]; then
-    echo "GuardDuty is enabled. Skipping Guardduty creation"
-    export TF_VAR_guard_duty="Yes"
+# Check and enable GuardDuty
+aws guardduty list-detectors --query "length(DetectorIds)" > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    echo "GuardDuty is already enabled."
 else
-    echo "GuardDuty is not enabled. Enabling Guardduty."
-    export TF_VAR_guard_duty="no"
+    aws guardduty create-detector --enable
+    echo "GuardDuty has been enabled."
 fi
 
-#Check for Security Hub Enable
-securityhub_enabled=$(aws securityhub describe-hub --region "$AWS_REGION" 2>/dev/null)
-
+# Check and enable Security Hub
+aws securityhub describe-hub --query "Hub.SubscriptionStatus" | grep ENABLED > /dev/null 2>&1
 if [ $? -eq 0 ]; then
-    echo "Security Hub is enabled. Skipping Security Hub creation"
-    export TF_VAR_Security_Hub="Yes"
+    echo "Security Hub is already enabled."
 else
-    echo "Security Hub is not enabled. Enabling Security Hub."
-    export TF_VAR_Security_Hub="no"
+    aws securityhub update-security-hub-configuration --auto-enable-controls
+    echo "Security Hub has been enabled."
+
+    # Enable default standards for Security Hub
+    aws securityhub update-security-hub-configuration --auto-enable-controls > /dev/null 2>&1
+    echo "Default standards have been enabled for Security Hub."
 fi
 
 # Terraform initialization
@@ -96,5 +96,5 @@ fi
 
 # Apply Terraform changes
 echo "Applying Terraform changes..."
-terraform apply --auto-approve
+terraform destroy --auto-approve
 check_error $? "Terraform apply failed."

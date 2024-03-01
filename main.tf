@@ -521,14 +521,6 @@ module "security_group_redis" {
 # Security Module
 ################################################################################
 
-resource "aws_securityhub_account" "securityhub_account" {
-  enable_default_standards = true
-}
-
-resource "aws_guardduty_detector" "guardduty_detector" {
-  enable = true
-}
-
 resource "aws_cloudwatch_event_rule" "cloudwatch_event_rule_guardduty" {
   name        = "${local.namespace}-guardduty-finding-events"
   description = "AWS GuardDuty event findings"
