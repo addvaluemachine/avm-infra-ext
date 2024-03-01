@@ -98,53 +98,115 @@ module "alb" {
 
   vpc_id                = module.vpc.vpc_id
   subnets               = module.vpc.public_subnets
-  security_groups       = [module.security_group_alb.security_group_id]
+  security_groups       = [aws_security_group.lb.id]
   create_security_group = false
-
-  http_tcp_listeners = [
-    {
-      port        = 80
-      protocol    = "HTTP"
-      action_type = "redirect"
-      redirect = {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301"
-      }
-    }
-  ]
-
-  https_listeners = [
-    {
-      port            = 443
-      protocol        = "HTTPS"
-      certificate_arn = module.acm.acm_certificate_arn
-      action_type     = "redirect"
-      redirect = {
-        port        = "443"
-        protocol    = "HTTPS"
-        host        = "chat.#{host}" # Redirect to chat subdomain
-        status_code = "HTTP_301"
-      }
-    },
-  ]
 
   tags = local.tags
 }
 
-resource "aws_alb_listener_rule" "this" {
-  listener_arn = tolist(module.alb.https_listener_arns)[0]
-  priority     = 1
+resource "aws_cloudfront_distribution" "avm_api" {
+  comment = "Cloudfront distribution for avm api load balancer."
+  aliases = ["api.${local.domain_name}"]
 
-  action {
+  origin {
+    domain_name = module.alb.lb_dns_name
+    origin_id   = "avm"
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["SSLv3", "TLSv1", "TLSv1.1", "TLSv1.2"]
+    }
+  }
+
+  enabled         = true
+  is_ipv6_enabled = true
+
+  default_cache_behavior {
+    allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods           = ["GET", "HEAD"]
+    viewer_protocol_policy   = "redirect-to-https"
+    compress                 = true
+    target_origin_id         = "avm"
+    cache_policy_id          = aws_cloudfront_cache_policy.cloudfront_cache_policy.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.cloudfront_request_policy.id
+  }
+
+  tags = {
+    Env = var.environment
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    acm_certificate_arn      = module.acm_cloudfront.acm_certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+}
+
+resource "aws_cloudfront_cache_policy" "cloudfront_cache_policy" {
+  name        = "${local.namespace}-cache"
+  comment     = "Cache policy for avm"
+  default_ttl = 0
+  max_ttl     = 31536000
+  min_ttl     = 0
+  parameters_in_cache_key_and_forwarded_to_origin {
+    headers_config {
+      header_behavior = "whitelist"
+      headers {
+        items = ["Authorization"]
+      }
+    }
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+    cookies_config {
+      cookie_behavior = "none"
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_request_policy" "cloudfront_request_policy" {
+  name    = "${local.namespace}-policy"
+  comment = "request policy for website factor"
+  cookies_config {
+    cookie_behavior = "all"
+  }
+  headers_config {
+    header_behavior = "none"
+  }
+  query_strings_config {
+    query_string_behavior = "all"
+  }
+}
+
+resource "aws_cloudfront_origin_access_identity" "access_identity_assets" {
+  comment = "Assets access identity"
+}
+
+resource "aws_lb_listener" "http_listener" {
+  load_balancer_arn = module.alb.lb_arn
+  port              = 80
+  protocol          = "HTTP"
+  default_action {
     type             = "forward"
     target_group_arn = module.server.target_group_arn
   }
+}
 
-  condition {
-    host_header {
-      values = ["api.${local.domain_name}"]
-    }
+resource "aws_lb_listener" "https_listener" {
+  load_balancer_arn = module.alb.lb_arn
+  port              = 443
+  protocol          = "HTTPS"
+  certificate_arn   = module.acm.acm_certificate_arn
+  default_action {
+    type             = "forward"
+    target_group_arn = module.server.target_group_arn
   }
 }
 
@@ -153,20 +215,29 @@ resource "aws_wafv2_web_acl_association" "this" {
   web_acl_arn  = aws_wafv2_web_acl.web_acl_alb.arn
 }
 
-module "security_group_alb" {
-  source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 5.1"
+data "aws_ec2_managed_prefix_list" "cloudfront" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
+}
 
-  name            = "${local.namespace}-alb-sg"
-  description     = "Allow all inbound traffic on the load balancer listener port"
-  vpc_id          = module.vpc.vpc_id
-  use_name_prefix = false
+resource "aws_security_group" "lb" {
+  name   = "${local.namespace}-alb-sg"
+  vpc_id = module.vpc.vpc_id
+}
 
-  ingress_cidr_blocks = ["0.0.0.0/0"]
-  ingress_rules       = ["http-80-tcp", "https-443-tcp"]
-  egress_rules        = ["all-all"]
+resource "aws_security_group_rule" "lb_ingress_cloudfront" {
+  description       = "HTTPS from CloudFront"
+  security_group_id = aws_security_group.lb.id
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  prefix_list_ids   = [data.aws_ec2_managed_prefix_list.cloudfront.id]
+}
 
-  tags = local.tags
+resource "aws_vpc_security_group_egress_rule" "example" {
+  security_group_id = aws_security_group.lb.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
 }
 
 resource "aws_cloudwatch_metric_alarm" "cloudwatch_alarm_alb_unhealthy_hosts" {
@@ -431,14 +502,14 @@ module "security_group_redis" {
   vpc_id          = module.vpc.vpc_id
   use_name_prefix = false
 
-  ingress_cidr_blocks = ["0.0.0.0/0"]
+  ingress_cidr_blocks = ["${module.vpc.vpc_cidr_block}"]
   ingress_with_cidr_blocks = [
     {
       from_port   = var.redis_port
       to_port     = var.redis_port
       protocol    = "tcp"
       description = "Allow inbound traffic from existing Security Groups"
-      cidr_blocks = "0.0.0.0/0"
+      cidr_blocks = "${module.vpc.vpc_cidr_block}"
     }
   ]
   egress_rules = ["all-all"]
@@ -535,8 +606,8 @@ resource "aws_route53_record" "route53_server_record" {
 
   alias {
     evaluate_target_health = false
-    name                   = module.alb.lb_dns_name
-    zone_id                = module.alb.lb_zone_id
+    name                   = aws_cloudfront_distribution.avm_api.domain_name
+    zone_id                = aws_cloudfront_distribution.avm_api.hosted_zone_id
   }
 }
 
@@ -689,7 +760,7 @@ module "server" {
   domain_name                     = local.domain_name
   vpc_id                          = module.vpc.vpc_id
   certificate_arn                 = module.acm_cloudfront.acm_certificate_arn
-  load_balancer_security_group_id = module.security_group_alb.security_group_id
+  load_balancer_security_group_id = aws_security_group.lb.id
   route53_zone_id                 = aws_route53_zone.this.zone_id
   web_acl_arn                     = module.acm_cloudfront.web_acl_cloudfront_arn
   ecs_cluster_name                = module.ecs.cluster_name

@@ -23,6 +23,7 @@ module "acm_certificate" {
     "assets.${local.domain_name}",
     "chat.${local.domain_name}",
     "admin.${local.domain_name}",
+    "api.${local.domain_name}"
   ]
 
   tags = local.tags

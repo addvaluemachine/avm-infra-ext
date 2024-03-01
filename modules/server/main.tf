@@ -105,7 +105,7 @@ resource "aws_ecs_service" "this" {
   launch_type                        = "FARGATE"
 
   network_configuration {
-    security_groups  = [module.security_group_ecs_service.security_group_id]
+    security_groups  = [aws_security_group.security_group_ecs_service.id]
     subnets          = toset(data.aws_subnets.subnets.ids)
     assign_public_ip = true
   }
@@ -142,20 +142,26 @@ resource "aws_alb_target_group" "this" {
   }
 }
 
-module "security_group_ecs_service" {
-  source  = "terraform-aws-modules/security-group/aws"
-  version = "~> 5.1"
+resource "aws_security_group" "security_group_ecs_service" {
+  name        = "${local.namespace}-server-sg"
+  description = "Security Group allowing inbound traffic on port 443 from load-balancer"
 
-  name            = "${local.namespace}-server-sg"
-  description     = "Allow all inbound traffic on the container listener port"
-  vpc_id          = var.vpc_id
-  use_name_prefix = false
+  vpc_id = var.vpc_id
 
-  ingress_cidr_blocks = ["0.0.0.0/0"]
-  ingress_rules       = ["https-443-tcp"]
-  egress_rules        = ["all-all"]
+  # Ingress rule allowing traffic on port 443 from another Security Group
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = ["${var.load_balancer_security_group_id}"]
+  }
 
-  tags = local.tags
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 ################################################################################
