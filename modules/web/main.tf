@@ -72,7 +72,7 @@ module "cdn" {
   version = "~> 3.2.1"
 
   aliases = ["admin.${local.domain_name}"]
-  comment = "admin"
+  comment = "Cloudfront distribution for avm admin"
 
   enabled             = true
   is_ipv6_enabled     = true

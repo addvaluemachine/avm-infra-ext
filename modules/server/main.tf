@@ -354,7 +354,7 @@ module "cdn" {
   version = "~> 3.2.1"
 
   aliases = ["assets.${local.domain_name}"]
-  comment = "assets"
+  comment = "Cloudfront distribution for avm assets"
 
   enabled         = true
   is_ipv6_enabled = true

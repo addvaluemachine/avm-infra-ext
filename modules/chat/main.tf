@@ -79,7 +79,7 @@ module "cdn" {
   version = "~> 3.2.1"
 
   aliases = ["chat.${local.domain_name}"]
-  comment = "chat"
+  comment = "Cloudfront distribution for avm chat"
 
   enabled             = true
   is_ipv6_enabled     = true

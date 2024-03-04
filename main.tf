@@ -105,7 +105,7 @@ module "alb" {
 }
 
 resource "aws_cloudfront_distribution" "avm_api" {
-  comment = "Cloudfront distribution for avm api load balancer."
+  comment = "Cloudfront distribution for avm api."
   aliases = ["api.${local.domain_name}"]
 
   origin {
@@ -157,10 +157,7 @@ resource "aws_cloudfront_cache_policy" "cloudfront_cache_policy" {
   min_ttl     = 0
   parameters_in_cache_key_and_forwarded_to_origin {
     headers_config {
-      header_behavior = "whitelist"
-      headers {
-        items = ["Authorization"]
-      }
+      header_behavior = "none"
     }
     query_strings_config {
       query_string_behavior = "none"
@@ -178,7 +175,7 @@ resource "aws_cloudfront_origin_request_policy" "cloudfront_request_policy" {
     cookie_behavior = "all"
   }
   headers_config {
-    header_behavior = "none"
+    header_behavior = "allViewer"
   }
   query_strings_config {
     query_string_behavior = "all"
